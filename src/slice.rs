@@ -147,7 +147,7 @@ pub fn fftshift<T: Copy + Default>(width: usize, height: usize, matrix: &[T]) ->
 pub mod dcst {
 
     use super::transpose;
-    use rustdct::DctPlanner;
+    use rustdct::{DctPlanner, DctNum};
 
     /// Compute the 2D cosine transform of an image buffer.
     ///
@@ -163,11 +163,11 @@ pub mod dcst {
     ///
     /// Remark: an allocation the size of the image buffer is performed for the transposition,
     /// as well as a scratch buffer while performing the rows and columns transforms.
-    pub fn dct_2d(width: usize, height: usize, img_buffer: &mut [f64]) {
+    pub fn dct_2d<T: DctNum + Copy + Default>(width: usize, height: usize, img_buffer: &mut [T]) {
         // Compute the FFT of each row of the image.
         let mut planner = DctPlanner::new();
         let dct_width = planner.plan_dct2(width);
-        let mut scratch = vec![0.0; dct_width.get_scratch_len()];
+        let mut scratch = vec![T::default(); dct_width.get_scratch_len()];
         for row_buffer in img_buffer.chunks_exact_mut(width) {
             dct_width.process_dct2_with_scratch(row_buffer, &mut scratch);
         }
@@ -175,7 +175,7 @@ pub mod dcst {
         // Transpose the image to be able to compute the FFT on the other dimension.
         let mut transposed = transpose(width, height, img_buffer);
         let dct_height = planner.plan_dct2(height);
-        scratch.resize(dct_height.get_scratch_len(), 0.0);
+        scratch.resize(dct_height.get_scratch_len(), T::default());
         for column_buffer in transposed.chunks_exact_mut(height) {
             dct_height.process_dct2_with_scratch(column_buffer, &mut scratch);
         }
@@ -187,7 +187,7 @@ pub mod dcst {
     /// This uses rayon internally, see the rayon crate docs to control the level
     /// of parallelism.
     #[cfg(feature = "parallel")]
-    pub fn par_dct_2d(width: usize, height: usize, img_buffer: &mut [f64]) {
+    pub fn par_dct_2d<T: DctNum + Default>(width: usize, height: usize, img_buffer: &mut [T]) {
         use rayon::prelude::{ParallelIterator, ParallelSliceMut};
 
         let mut planner = DctPlanner::new();
@@ -225,11 +225,11 @@ pub mod dcst {
     ///
     /// Remark: an allocation the size of the image buffer is performed for the transposition,
     /// as well as a scratch buffer while performing the rows and columns transforms.
-    pub fn idct_2d(width: usize, height: usize, img_buffer: &mut [f64]) {
+    pub fn idct_2d<T: DctNum + Default>(width: usize, height: usize, img_buffer: &mut [T]) {
         // Compute the FFT of each row of the image.
         let mut planner = DctPlanner::new();
         let dct_width = planner.plan_dct3(width);
-        let mut scratch = vec![0.0; dct_width.get_scratch_len()];
+        let mut scratch = vec![T::default(); dct_width.get_scratch_len()];
         for row_buffer in img_buffer.chunks_exact_mut(width) {
             dct_width.process_dct3_with_scratch(row_buffer, &mut scratch);
         }
@@ -237,7 +237,7 @@ pub mod dcst {
         // Transpose the image to be able to compute the FFT on the other dimension.
         let mut transposed = transpose(width, height, img_buffer);
         let dct_height = planner.plan_dct3(height);
-        scratch.resize(dct_height.get_scratch_len(), 0.0);
+        scratch.resize(dct_height.get_scratch_len(), T::default());
         for column_buffer in transposed.chunks_exact_mut(height) {
             dct_height.process_dct3_with_scratch(column_buffer, &mut scratch);
         }
@@ -249,7 +249,7 @@ pub mod dcst {
     /// This uses rayon internally, see the rayon crate docs to control the level
     /// of parallelism.
     #[cfg(feature = "parallel")]
-    pub fn par_idct_2d(width: usize, height: usize, img_buffer: &mut [f64]) {
+    pub fn par_idct_2d<T: DctNum + Default>(width: usize, height: usize, img_buffer: &mut [T]) {
         use rayon::prelude::{ParallelIterator, ParallelSliceMut};
 
         let mut planner = DctPlanner::new();
